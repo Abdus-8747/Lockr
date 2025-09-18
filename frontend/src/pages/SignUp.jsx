@@ -2,7 +2,7 @@ import { useState } from "react";
 import { signup } from "../api";
 import { useNavigate, Link } from "react-router-dom";
 
-export default function Signup() {
+export default function SignUp() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
