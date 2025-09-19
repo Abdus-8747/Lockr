@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { deleteVaultItem, getVaultItems, updateVaultItem } from "../api";
-import { Eye, EyeOff } from "lucide-react"; // install lucide-react if not already
+import { Eye, EyeOff, Search } from "lucide-react";
 
 export default function VaultList({ items = [], setItems }) {
   const [editId, setEditId] = useState(null);
@@ -11,7 +11,9 @@ export default function VaultList({ items = [], setItems }) {
     notes: "",
   });
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState({}); // track visibility per item
+  const [showPassword, setShowPassword] = useState({});
+  const [search, setSearch] = useState(""); // search filter
+  const [confirmDelete, setConfirmDelete] = useState(null); // track item for confirm modal
 
   const refreshItems = async () => {
     try {
@@ -27,6 +29,7 @@ export default function VaultList({ items = [], setItems }) {
     try {
       await deleteVaultItem(id);
       await refreshItems();
+      setConfirmDelete(null);
     } catch (err) {
       console.error(err);
       setError("Failed to delete item");
@@ -65,14 +68,35 @@ export default function VaultList({ items = [], setItems }) {
     setShowPassword((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // filter items by website, username, or notes
+  const filteredItems = items.filter(
+    (item) =>
+      item.website?.toLowerCase().includes(search.toLowerCase()) ||
+      item.username?.toLowerCase().includes(search.toLowerCase()) ||
+      item.notes?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="grid gap-4">
       {error && <p className="text-red-500">{error}</p>}
 
-      {items.length === 0 ? (
-        <p className="text-gray-500 text-center py-6">No vault items yet</p>
+      {/* Search Bar */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+        <input
+          type="text"
+          placeholder="Search by website, username, or notes..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+
+      {/* List */}
+      {filteredItems.length === 0 ? (
+        <p className="text-gray-500 text-center py-6">No vault items found</p>
       ) : (
-        items.map((item) => (
+        filteredItems.map((item) => (
           <div
             key={item._id}
             className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm hover:shadow-md transition"
@@ -162,7 +186,7 @@ export default function VaultList({ items = [], setItems }) {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(item._id)}
+                    onClick={() => setConfirmDelete(item)}
                     className="px-3 py-1 rounded-md text-sm border border-red-500 text-red-600 hover:bg-red-50 transition"
                   >
                     Delete
@@ -172,6 +196,35 @@ export default function VaultList({ items = [], setItems }) {
             )}
           </div>
         ))
+      )}
+
+      {/* Delete Confirm Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-80">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Confirm Delete
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Are you sure you want to delete{" "}
+              <span className="font-medium">{confirmDelete.website}</span>?
+            </p>
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(confirmDelete._id)}
+                className="px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
